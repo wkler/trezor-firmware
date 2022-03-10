@@ -138,6 +138,7 @@ fn generate_micropython_bindings() {
         .allowlist_var("MP_BUFFER_READ")
         .allowlist_var("MP_BUFFER_WRITE")
         .allowlist_var("MP_BUFFER_RW")
+        .allowlist_var("mp_type_str")
         // dict
         .allowlist_type("mp_obj_dict_t")
         .allowlist_function("mp_obj_new_dict")
@@ -145,6 +146,7 @@ fn generate_micropython_bindings() {
         .allowlist_var("mp_type_dict")
         // fun
         .allowlist_type("mp_obj_fun_builtin_fixed_t")
+        .allowlist_var("mp_type_fun_builtin_0")
         .allowlist_var("mp_type_fun_builtin_1")
         .allowlist_var("mp_type_fun_builtin_2")
         .allowlist_var("mp_type_fun_builtin_3")
