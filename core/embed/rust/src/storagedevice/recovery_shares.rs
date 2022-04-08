@@ -32,7 +32,7 @@ extern "C" fn storagerecoveryshares_set(index: Obj, group_index: Obj, mnemonic: 
             APP_RECOVERY_SHARES,
             index + group_index * MAX_SHARE_COUNT as u8,
         )
-        .set(mnemonic.as_ref())?;
+        .set(String::from(mnemonic.as_ref()))?;
         Ok(Obj::const_none())
     };
     unsafe { util::try_or_raise(block) }

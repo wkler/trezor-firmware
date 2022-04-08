@@ -8,12 +8,14 @@ use crate::{
         qstr::Qstr,
     },
     storagedevice::helpers,
-    trezorhal::{random, storage, storage_field::Field},
+    trezorhal::{random, storage, storage_field::Field, storage_field_ops::FieldObj},
     util,
 };
 use core::convert::{TryFrom, TryInto};
 use cstr_core::cstr;
 use heapless::{String, Vec};
+
+const ABC: FieldObj<u32> = FieldObj::private(0x01, 0x01);
 
 // TODO: can we import messages enums?
 
@@ -161,7 +163,7 @@ extern "C" fn storagedevice_get_label() -> Obj {
 extern "C" fn storagedevice_set_label(label: Obj) -> Obj {
     let block = || {
         let label = StrBuffer::try_from(label)?;
-        _LABEL.set(label.as_ref())?;
+        _LABEL.set(String::from(label.as_ref()))?;
         Ok(Obj::const_none())
     };
     unsafe { util::try_or_raise(block) }
@@ -174,7 +176,7 @@ extern "C" fn storagedevice_get_device_id() -> Obj {
         } else {
             let new_device_id = &random::get_random_bytes(12) as &[u8];
             let hex_id = helpers::hexlify_bytes(new_device_id);
-            DEVICE_ID.set(hex_id.as_str())?;
+            DEVICE_ID.set(String::from(hex_id.as_str()))?;
             hex_id.as_str().try_into()
         }
     };
@@ -184,7 +186,7 @@ extern "C" fn storagedevice_get_device_id() -> Obj {
 extern "C" fn storagedevice_set_device_id(device_id: Obj) -> Obj {
     let block = || {
         let device_id = StrBuffer::try_from(device_id)?;
-        DEVICE_ID.set(device_id.as_ref())?;
+        DEVICE_ID.set(String::from(device_id.as_ref()))?;
         Ok(Obj::const_none())
     };
     unsafe { util::try_or_raise(block) }
@@ -763,6 +765,10 @@ pub static mp_module_trezorstoragedevice: Module = obj_module! {
     /// def set_experimental_features(enabled: bool) -> None:
     ///     """Set experimental features."""
     Qstr::MP_QSTR_set_experimental_features => obj_fn_1!(storagedevice_set_experimental_features).as_obj(),
+
+    // Qstr::MP_QSTR_set_experimental_features => obj_fn_0!(ABC).as_obj(),
+    // Qstr::MP_QSTR_set_experimental_features => obj_type!(ABC).as_obj(),
+    // Qstr::MP_QSTR_set_experimental_features => obj_map!(ABC).as_obj(),
 };
 
 #[cfg(test)]

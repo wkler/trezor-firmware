@@ -7,3 +7,4 @@ pub mod random;
 pub mod slip39;
 pub mod storage;
 pub mod storage_field;
+pub mod storage_field_ops;
