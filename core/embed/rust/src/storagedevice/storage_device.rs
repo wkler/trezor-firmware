@@ -102,8 +102,7 @@ extern "C" fn storagedevice_get_version() -> Obj {
 
 extern "C" fn storagedevice_set_version(version: Obj) -> Obj {
     let block = || {
-        VERSION.set(Buffer::try_from(version)?.as_ref())?;
-        Ok(Obj::const_none())
+        VERSION.set(Buffer::try_from(version)?.as_ref())
     };
     unsafe { util::try_or_raise(block) }
 }
@@ -137,7 +136,7 @@ extern "C" fn storagedevice_get_rotation() -> Obj {
 
 extern "C" fn storagedevice_set_rotation(rotation: Obj) -> Obj {
     let block = || {
-        let rotation = u16::try_from(rotation)?;
+        let rotation = rotation.try_into()?;
 
         if ![0, 90, 180, 270].contains(&rotation) {
             Err(Error::ValueError(cstr!("Not valid rotation")))

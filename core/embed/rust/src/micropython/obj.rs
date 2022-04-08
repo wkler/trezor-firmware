@@ -1,15 +1,16 @@
 use core::{
     convert::{TryFrom, TryInto},
     num::TryFromIntError,
+    str::FromStr,
 };
 
-use cstr_core::CStr;
+use cstr_core::{CStr, cstr};
 
 use crate::error::Error;
 
 use heapless::{String, Vec};
 
-use super::{ffi, runtime::catch_exception};
+use super::{ffi, runtime::catch_exception, buffer::StrBuffer};
 
 pub type Obj = ffi::mp_obj_t;
 pub type ObjBase = ffi::mp_obj_base_t;
@@ -217,6 +218,12 @@ impl TryFrom<i64> for Obj {
     }
 }
 
+impl From<()> for Obj {
+    fn from(_: ()) -> Self {
+        Obj::const_none()
+    }
+}
+
 impl TryFrom<u32> for Obj {
     type Error = Error;
 
@@ -301,6 +308,18 @@ impl TryFrom<&str> for Obj {
         //  - `str` is guaranteed to be UTF-8.
         // EXCEPTION: Will raise if allocation fails.
         catch_exception(|| unsafe { ffi::mp_obj_new_str(val.as_ptr().cast(), val.len()) })
+    }
+}
+
+impl<const N: usize> TryFrom<Obj> for String<N> {
+    type Error = Error;
+
+    fn try_from(val: Obj) -> Result<Self, Self::Error> {
+        let buffer = StrBuffer::try_from(val)?;
+        String::from_str(buffer.as_ref()).or(Err(Error::ValueError(cstr!("String too long"))))
+        // SAFETY:
+        //  - `str` is guaranteed to be UTF-8.
+        // EXCEPTION: Will raise if allocation fails.
     }
 }
 
@@ -419,14 +438,16 @@ impl TryFrom<Obj> for usize {
     }
 }
 
-impl<T> From<Option<T>> for Obj
+impl<T> TryFrom<Option<T>> for Obj
 where
-    T: Into<Obj>,
+    T: TryInto<Obj, Error = Error>
 {
-    fn from(val: Option<T>) -> Self {
+    type Error = Error;
+
+    fn try_from(val: Option<T>) -> Result<Self, Self::Error> {
         match val {
-            Some(v) => v.into(),
-            None => Self::const_none(),
+            Some(v) => v.try_into(),
+            None => Ok(Self::const_none()),
         }
     }
 }

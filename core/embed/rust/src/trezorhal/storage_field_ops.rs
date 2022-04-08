@@ -1,3 +1,13 @@
+use crate::{
+    error::Error,
+    micropython::{
+        map::Map,
+        obj::{Obj, ObjBase},
+        qstr::Qstr,
+        typ::Type,
+    },
+};
+
 use super::{storage::StorageResult, storage_field::Field};
 use heapless::{String, Vec};
 
@@ -24,23 +34,38 @@ pub trait FieldOps<T>: FieldOpsBase + FieldGetSet<T> {}
 impl<T> FieldOps<T> for Field<T> where Field<T>: FieldGetSet<T> {}
 
 pub struct FieldObj<T> {
+    base: ObjBase,
     field: Field<T>,
+    validator: Option<fn(T) -> StorageResult<T>>,
 }
 
-impl<T> FieldObj<T> {
-    pub const fn new(field: Field<T>) -> Self {
-        Self { field }
+impl<T> FieldObj<T>
+where
+    Field<T>: FieldOps<T>,
+    T: TryInto<Obj, Error = Error>,
+{
+    pub const fn from(field: Field<T>) -> Self {
+        Self {
+            base: Self::obj_type().as_base(),
+            field,
+            validator: None,
+        }
     }
 
-    // Custom constructors, so we do not need to create Field manually
-    pub const fn public(app: u8, key: u8) -> Self {
-        Self::new(Field::public(app, key))
+    fn obj_type() -> &'static Type {
+        static TYPE: Type = obj_type! {
+            name: Qstr::MP_QSTR_FieldType,
+            locals: &obj_dict!(obj_map! {
+                Qstr::MP_QSTR_get => obj_fn_1!(blabla_get),
+                Qstr::MP_QSTR_set => obj_fn_2!(blabla_set),
+
+            }),
+        };
+        &TYPE
     }
-    pub const fn public_writable(app: u8, key: u8) -> Self {
-        Self::new(Field::public_writable(app, key))
-    }
-    pub const fn private(app: u8, key: u8) -> Self {
-        Self::new(Field::private(app, key))
+
+    pub fn obj_get(&self) -> Result<Obj, Error> {
+        self.field.get().try_into()
     }
 }
 
@@ -55,6 +80,7 @@ where
     }
 
     fn set(&self, val: T) -> StorageResult<()> {
+        let val = self.validator.map_or(Ok(val), |f| f(val))?;
         // TODO: allow for changing/validating the value before setting
         self.field.set(val)
     }
@@ -137,17 +163,5 @@ impl<const N: usize> FieldGetSet<String<N>> for Field<String<N>> {
 //     }
 // }
 
-const ABC: FieldObj<u32> = FieldObj {
-    field: Field::private(0x01, 0x01),
-};
-const DEF: FieldObj<u32> = FieldObj::private(0x01, 0x01);
-
-fn trial() {
-    let _a = ABC.get();
-    let _a = ABC.field.get();
-    let _b = ABC.field.set(0x01);
-    let _c = DEF.has();
-    let _c = DEF.field.has();
-    let _d = DEF.field.delete();
-    let _d = ABC.delete();
-}
+const FIELD: Field<u32> = Field::public(0x10, 0x10);
+const ABC: FieldObj<u32> = FieldObj::from(FIELD);
