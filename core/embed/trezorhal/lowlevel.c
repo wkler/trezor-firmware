@@ -57,85 +57,85 @@
 #define OPTION_BYTES_BANK1_WRP (*(volatile uint16_t* const)0x1FFFC008U)
 #define OPTION_BYTES_BANK2_WRP (*(volatile uint16_t* const)0x1FFEC008U)
 
-uint32_t flash_wait_and_clear_status_flags(void) {
-  while (FLASH->SR & FLASH_SR_BSY)
-    ;  // wait for all previous flash operations to complete
-  const uint32_t result =
-      FLASH->SR & FLASH_STATUS_ALL_FLAGS;  // get the current status flags
-  FLASH->SR |= FLASH_STATUS_ALL_FLAGS;     // clear all status flags
-  return result;
-}
+// uint32_t flash_wait_and_clear_status_flags(void) {
+//   while (FLASH->SR & FLASH_SR_BSY)
+//     ;  // wait for all previous flash operations to complete
+//   const uint32_t result =
+//       FLASH->SR & FLASH_STATUS_ALL_FLAGS;  // get the current status flags
+//   FLASH->SR |= FLASH_STATUS_ALL_FLAGS;     // clear all status flags
+//   return result;
+// }
 
-secbool flash_check_option_bytes(void) {
-  flash_wait_and_clear_status_flags();
-  // check values stored in flash interface registers
-  if ((FLASH->OPTCR & ~3) !=
-      FLASH_OPTCR_VALUE) {  // ignore bits 0 and 1 because they are control bits
-    return secfalse;
-  }
-  if (FLASH->OPTCR1 != FLASH_OPTCR1_nWRP) {
-    return secfalse;
-  }
-  // check values stored in flash memory
-  if ((OPTION_BYTES_RDP_USER & ~3) !=
-      OPTION_BYTES_RDP_USER_VALUE) {  // bits 0 and 1 are unused
-    return secfalse;
-  }
-  if ((OPTION_BYTES_BANK1_WRP & 0xCFFFU) !=
-      OPTION_BYTES_BANK1_WRP_VALUE) {  // bits 12 and 13 are unused
-    return secfalse;
-  }
-  if ((OPTION_BYTES_BANK2_WRP & 0xFFFU) !=
-      OPTION_BYTES_BANK2_WRP_VALUE) {  // bits 12, 13, 14, and 15 are unused
-    return secfalse;
-  }
-  return sectrue;
-}
+// secbool flash_check_option_bytes(void) {
+//   flash_wait_and_clear_status_flags();
+//   // check values stored in flash interface registers
+//   if ((FLASH->OPTCR & ~3) !=
+//       FLASH_OPTCR_VALUE) {  // ignore bits 0 and 1 because they are control bits
+//     return secfalse;
+//   }
+//   if (FLASH->OPTCR1 != FLASH_OPTCR1_nWRP) {
+//     return secfalse;
+//   }
+//   // check values stored in flash memory
+//   if ((OPTION_BYTES_RDP_USER & ~3) !=
+//       OPTION_BYTES_RDP_USER_VALUE) {  // bits 0 and 1 are unused
+//     return secfalse;
+//   }
+//   if ((OPTION_BYTES_BANK1_WRP & 0xCFFFU) !=
+//       OPTION_BYTES_BANK1_WRP_VALUE) {  // bits 12 and 13 are unused
+//     return secfalse;
+//   }
+//   if ((OPTION_BYTES_BANK2_WRP & 0xFFFU) !=
+//       OPTION_BYTES_BANK2_WRP_VALUE) {  // bits 12, 13, 14, and 15 are unused
+//     return secfalse;
+//   }
+//   return sectrue;
+// }
 
-void flash_lock_option_bytes(void) {
-  FLASH->OPTCR |= FLASH_OPTCR_OPTLOCK;  // lock the option bytes
-}
+// void flash_lock_option_bytes(void) {
+//   FLASH->OPTCR |= FLASH_OPTCR_OPTLOCK;  // lock the option bytes
+// }
 
-void flash_unlock_option_bytes(void) {
-  if ((FLASH->OPTCR & FLASH_OPTCR_OPTLOCK) == 0) {
-    return;  // already unlocked
-  }
-  // reference RM0090 section 3.7.2
-  // write the special sequence to unlock
-  FLASH->OPTKEYR = FLASH_OPT_KEY1;
-  FLASH->OPTKEYR = FLASH_OPT_KEY2;
-  while (FLASH->OPTCR & FLASH_OPTCR_OPTLOCK)
-    ;  // wait until the flash option control register is unlocked
-}
+// void flash_unlock_option_bytes(void) {
+//   if ((FLASH->OPTCR & FLASH_OPTCR_OPTLOCK) == 0) {
+//     return;  // already unlocked
+//   }
+//   // reference RM0090 section 3.7.2
+//   // write the special sequence to unlock
+//   FLASH->OPTKEYR = FLASH_OPT_KEY1;
+//   FLASH->OPTKEYR = FLASH_OPT_KEY2;
+//   while (FLASH->OPTCR & FLASH_OPTCR_OPTLOCK)
+//     ;  // wait until the flash option control register is unlocked
+// }
 
-uint32_t flash_set_option_bytes(void) {
-  // reference RM0090 section 3.7.2
-  flash_wait_and_clear_status_flags();
-  flash_unlock_option_bytes();
-  flash_wait_and_clear_status_flags();
-  FLASH->OPTCR1 =
-      FLASH_OPTCR1_nWRP;  // no write protection on any sectors in bank 2
-  FLASH->OPTCR =
-      FLASH_OPTCR_VALUE;  // WARNING: dev board safe unless you compile for
-                          // PRODUCTION or change this value!!!
-  FLASH->OPTCR |= FLASH_OPTCR_OPTSTRT;  // begin committing changes to flash
-  const uint32_t result =
-      flash_wait_and_clear_status_flags();  // wait until changes are committed
-  flash_lock_option_bytes();
-  return result;
-}
+// uint32_t flash_set_option_bytes(void) {
+//   // reference RM0090 section 3.7.2
+//   flash_wait_and_clear_status_flags();
+//   flash_unlock_option_bytes();
+//   flash_wait_and_clear_status_flags();
+//   FLASH->OPTCR1 =
+//       FLASH_OPTCR1_nWRP;  // no write protection on any sectors in bank 2
+//   FLASH->OPTCR =
+//       FLASH_OPTCR_VALUE;  // WARNING: dev board safe unless you compile for
+//                           // PRODUCTION or change this value!!!
+//   FLASH->OPTCR |= FLASH_OPTCR_OPTSTRT;  // begin committing changes to flash
+//   const uint32_t result =
+//       flash_wait_and_clear_status_flags();  // wait until changes are committed
+//   flash_lock_option_bytes();
+//   return result;
+// }
 
-secbool flash_configure_option_bytes(void) {
-  if (sectrue == flash_check_option_bytes()) {
-    return sectrue;  // we DID NOT have to change the option bytes
-  }
+// secbool flash_configure_option_bytes(void) {
+//   if (sectrue == flash_check_option_bytes()) {
+//     return sectrue;  // we DID NOT have to change the option bytes
+//   }
 
-  do {
-    flash_set_option_bytes();
-  } while (sectrue != flash_check_option_bytes());
+//   do {
+//     flash_set_option_bytes();
+//   } while (sectrue != flash_check_option_bytes());
 
-  return secfalse;  // notify that we DID have to change the option bytes
-}
+//   return secfalse;  // notify that we DID have to change the option bytes
+// }
 
 void periph_init(void) {
   // STM32F4xx HAL library initialization:
@@ -146,16 +146,19 @@ void periph_init(void) {
   HAL_Init();
 
   // Enable GPIO clocks
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
+  // __HAL_RCC_GPIOA_CLK_ENABLE();
+  // __HAL_RCC_GPIOB_CLK_ENABLE();
+  // __HAL_RCC_GPIOC_CLK_ENABLE();
+  // __HAL_RCC_GPIOD_CLK_ENABLE();
 
   // enable the PVD (programmable voltage detector).
   // select the "2.7V" threshold (level 5).
   // this detector will be active regardless of the
   // flash option byte BOR setting.
-  __HAL_RCC_PWR_CLK_ENABLE();
+
+  //__HAL_RCC_PWR_CLK_ENABLE();//can not find this in H7 lib //RCC_APB1ENR_PWREN
+  HAL_PWR_EnableBkUpAccess();//ALT
+
   PWR_PVDTypeDef pvd_config;
   pvd_config.PVDLevel = PWR_PVDLEVEL_5;
   pvd_config.Mode = PWR_PVD_MODE_IT_RISING_FALLING;
@@ -164,6 +167,11 @@ void periph_init(void) {
   NVIC_EnableIRQ(PVD_IRQn);
 }
 
+void reset_flags_reset(void) {
+  RCC->RSR |= RCC_RSR_RMVF;  // clear the reset flags
+}
+
+#if defined(STM32F427xx) || defined(STM32F405xx)
 secbool reset_flags_check(void) {
 #if PRODUCTION
   // this is effective enough that it makes development painful, so only use it
@@ -182,3 +190,4 @@ secbool reset_flags_check(void) {
 void reset_flags_reset(void) {
   RCC->CSR |= RCC_CSR_RMVF;  // clear the reset flags
 }
+#endif

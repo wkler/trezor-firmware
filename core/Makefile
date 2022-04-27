@@ -1,6 +1,6 @@
 .PHONY: vendor
 
-JOBS = 4
+JOBS = 1
 MAKE = make -j $(JOBS)
 SCONS = scons -Q -j $(JOBS)
 

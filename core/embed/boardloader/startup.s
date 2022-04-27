@@ -5,7 +5,7 @@
   .global reset_handler
   .type reset_handler, STT_FUNC
 reset_handler:
-  bl SystemInit
+  bl SystemInitAtStartup
 
   // read the first rng data and save it
   ldr r0, =0            // r0 - previous value
